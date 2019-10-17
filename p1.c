@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <dirent.h>
 
 //Defínese a constante MAX, que será o tamaño máximo das cadeas
 #define MAX  300
@@ -88,10 +89,7 @@ int TrocearCadena(char  cadena[], char cad1[] , char cad2[])
 				default:cad2[i-(letras)]=trozos[i];ult= i-(letras); break;
 		}
 	}
-  puts(cad1);
-  printf("%s.\n",cad2 );
   if (palabras==2) cad2[ult]='\0';
-  printf("%s.\n",cad2 );
 
 return palabras;
 }
@@ -298,7 +296,7 @@ void crear(char arg[], int palabras){
   if (palabras == 3){
     if (strncmp(arg,"-d ",3)==0){
       char aux1[MAX], aux2[MAX];
-      TrocearCadena(arg, aux1, aux2);
+      TrocearCadena(arg, aux1, aux2); //Quedámonos cas duas ultimas palabras
       getcwd(aux1, MAX);
       mkdir(strcat(strcat(aux1,"/"),aux2), 0700);
      }
@@ -311,6 +309,70 @@ void crear(char arg[], int palabras){
 /*
 --------------------------------------------------------------------------------
 */
+void listar(char arg[], int palabras){
+
+}
+/*
+--------------------------------------------------------------------------------
+*/
+void borrar (char arg[], int palabras){
+  if (numPalabras==1){
+    char dir[MAX];
+    limpiarBuffer(dir);
+    getcwd(dir,MAX);
+    listar(dir,2);
+  }
+
+  if (palabras==2){
+    if (strncmp(arg,"-r\0 ",3)!=0){
+        if (remove(arg) != 0) perror("Non se puido eliminar o arquivo");
+    }
+    else{borrar("",1);}
+  }
+
+  if (palabras == 3){
+    char aux1[MAX] , aux2[MAX];
+    limpiarBuffer(aux1);
+    limpiarBuffer(aux2);
+    TrocearCadena(arg,aux1,aux2);
+    char d[MAX];
+    getcwd(d,MAX);
+    if (strncmp(aux1,"-r\0",3)==0){
+      int f;
+      int i=2;
+      f=remove(aux2);
+      if(f!=0){
+        int comp = chdir(aux2);
+        chdir("..");
+        if(comp==0){
+          DIR * direct;
+          direct = opendir(aux2);
+          seekdir(direct,i);
+            struct dirent * sig = readdir(direct);
+            if (sig!=NULL){
+              chdir(aux2);
+                while(sig!=NULL){
+                  limpiarBuffer(aux1);
+                  borrar(strcat(strcat(aux1,"-r "),sig->d_name),3);
+                  sig=readdir(direct);
+                  f=0;
+              }
+              chdir("..");
+              closedir(direct);
+              borrar(aux2,2);
+            }
+        }
+        if(f!=0){perror("Borrar no ha sido posible");}
+      }
+    }
+    else{printf("Argumento non valido\n");}
+  }
+  if (palabras>3) printf("Demasiados argumentos\n" );
+}
+/*
+--------------------------------------------------------------------------------
+*/
+
 void escollerFuncion(char com[],char arg[],int palabras,int * acabado,tList * h){
   //Tendo en conta o comando recivido e o número de palabras chámase a función necesaria
   // ou salta o erro por comando non válido ou por exceso de argumentos
@@ -349,7 +411,12 @@ void escollerFuncion(char com[],char arg[],int palabras,int * acabado,tList * h)
                     crear(arg,palabras);
                   }
                   else{
-                    printf("%s no encontrado\n",com );
+                    if(strncmp(com,"borrar\0",7)==0){
+                        borrar(arg,palabras);
+                      }
+                      else{
+                        printf("%s no encontrado\n",com );
+                    }
                   }
 								}
 							}
