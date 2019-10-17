@@ -301,7 +301,7 @@ void crear(char arg[], int palabras){
       mkdir(strcat(strcat(aux1,"/"),aux2), 0700);
      }
    else {
-     printf("Error\n");
+     printf("Argumento no valido\n");
    }
  }
  if (palabras>3) printf("Demasiados argumentos\n" );
@@ -325,7 +325,7 @@ void borrar (char arg[], int palabras){
 
   if (palabras==2){
     if (strncmp(arg,"-r\0 ",3)!=0){
-        if (remove(arg) != 0) perror("Non se puido eliminar o arquivo");
+        if (remove(arg) != 0) perror("Borrar no ha sido posible");
     }
     else{borrar("",1);}
   }
@@ -365,7 +365,7 @@ void borrar (char arg[], int palabras){
         if(f!=0){perror("Borrar no ha sido posible");}
       }
     }
-    else{printf("Argumento non valido\n");}
+    else{printf("Argumento no valido\n");}
   }
   if (palabras>3) printf("Demasiados argumentos\n" );
 }
