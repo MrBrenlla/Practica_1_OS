@@ -79,6 +79,8 @@ int TrocearCadena(char  cadena[], char cad1[] , char cad2[])
 
   //Usando a nova cadea cóllense a primeira palabra como cad1 e e o resto como cad2
   // e úsanse os espazos para contar o número de palabras
+  limpiarBuffer(cad1);
+  limpiarBuffer(cad2);
   int ult;
 	for (int i=0 ; (cadena[i]!='\0') ; i++ ) {
 		if ((trozos[i]==' ')){
@@ -310,6 +312,24 @@ void crear(char arg[], int palabras){
 --------------------------------------------------------------------------------
 */
 void listar(char arg[], int palabras){
+  int l =0;
+  int v =0;
+  int r =0;
+  int comp =0;
+  if(palabras>1){
+    char aux1[MAX], aux2 [MAX], aux3[MAX];
+    strcpy(aux2,arg);
+    while (comp==0){
+      TrocearCadena(aux2,aux1,aux3);
+      if (strncmp(aux1,"-l\0",3)==0) l=1;
+      else if (strncmp(aux1,"-v\0",3)==0) v=1;
+            else if (strncmp(aux1,"-r\0",3)==0) r=1;
+              else comp=1;
+      limpiarBuffer(aux2);
+      strcpy(aux2,aux3);
+    }
+    printf("%d %d %d %s , %s\n",l,v,r,aux1,aux2);
+  }
 
 }
 /*
@@ -399,7 +419,7 @@ void escollerFuncion(char com[],char arg[],int palabras,int * acabado,tList * h)
 						}
 						else{
 							if (strncmp(com,"hist\0",5)==0){
-								hist(arg,h,palabras);
+								 hist(arg,h,palabras);
 							}
 							else{
 								if (((strncmp(com,"fin\0",4)==0) || (strncmp(com,"end\0",4)==0) || (strncmp(com,"exit\0",5)==0)) ){
@@ -415,7 +435,12 @@ void escollerFuncion(char com[],char arg[],int palabras,int * acabado,tList * h)
                         borrar(arg,palabras);
                       }
                       else{
-                        printf("%s no encontrado\n",com );
+                        if(strncmp(com,"listar\0",7)==0){
+                            listar(arg,palabras);
+                          }
+                          else{
+                            printf("%s no encontrado\n",com );
+                          }
                     }
                   }
 								}
