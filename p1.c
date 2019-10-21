@@ -102,7 +102,22 @@ return palabras;
 void fin(int * x ){
 	*x=1;
 }
-
+/*
+--------------------------------------------------------------------------------
+*/
+long tamanho(char nom[]){
+  FILE * ficheiro = fopen(nom,"r");
+  long nBytes;
+  if(ficheiro!=0){
+     fseek(ficheiro, 0, SEEK_END); // Colocar el cursor al final del fichero
+     nBytes = ftell(ficheiro); // Tamaño en bytes
+   }
+   else{
+     chdir(nom);
+     nBytes=tamanho(".");
+   }
+  return nBytes;
+}
 /*
 --------------------------------------------------------------------------------
 */
@@ -314,8 +329,8 @@ void crear(char arg[], int palabras){
 void mostrar(int l,int v,struct dirent * sig){
   char nom[MAX];
   strcpy(nom,sig->d_name);
-  if (v==0 || strncmp(nom,".",1)!=0 || strncmp(nom,"./",2)==0){
-    if (l==0) printf("%s\n",nom);
+  if (v==0 || strncmp(nom,".",1)!=0){
+    if (l==0) printf("%s %d\n",nom, tamanho(nom));
   }
 }
 /*
@@ -351,7 +366,6 @@ void listar(char actualdir[], char arg[], int palabras, int rec){
         if (strncmp(aux1,"..\0",3)==0) chdir(dir);
         else chdir("..");
   }
-  //cdir("",1);
   if(rec==0) printf("********%s\n",aux1 );
   if(comp==0){
     if(rec==1) printf("********%s%s\n",actualdir,aux1 );
