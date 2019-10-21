@@ -311,36 +311,87 @@ void crear(char arg[], int palabras){
 /*
 --------------------------------------------------------------------------------
 */
-void listar(char arg[], int palabras){
-  int l =0;
-  int v =0;
-  int r =0;
-  int comp =0;
-  if(palabras>1){
-    char aux1[MAX], aux2 [MAX], aux3[MAX];
-    strcpy(aux2,arg);
-    while (comp==0){
-      TrocearCadena(aux2,aux1,aux3);
-      if (strncmp(aux1,"-l\0",3)==0) l=1;
-      else if (strncmp(aux1,"-v\0",3)==0) v=1;
-            else if (strncmp(aux1,"-r\0",3)==0) r=1;
-              else comp=1;
-      limpiarBuffer(aux2);
-      strcpy(aux2,aux3);
-    }
-    printf("%d %d %d %s , %s\n",l,v,r,aux1,aux2);
+void mostrar(int l,int v,struct dirent * sig){
+  char nom[MAX];
+  strcpy(nom,sig->d_name);
+  if (v==0 || strncmp(nom,".",1)!=0 || strncmp(nom,"./",2)==0){
+    if (l==0) printf("%s\n",nom);
   }
-
 }
 /*
 --------------------------------------------------------------------------------
 */
+void listar(char actualdir[], char arg[], int palabras, int rec){
+  int l =0;
+  int v =0;
+  int r =0;
+  int comp =0;
+  char aux1[MAX], aux2 [MAX], aux3[MAX] , dir[MAX];
+  strcpy(aux2,arg);
+  while (comp==0){
+    limpiarBuffer(aux1);
+    palabras=TrocearCadena(aux2,aux1,aux3);
+    if (strncmp(aux1,"-l\0",3)==0) l=1;
+    else if (strncmp(aux1,"-v\0",3)==0) v=1;
+          else if (strncmp(aux1,"-r\0",3)==0) r=1;
+            else comp=1;
+    limpiarBuffer(aux2);
+    strcpy(aux2,aux3);
+  }
+  if (strncmp(aux1,"\0\0",2)==0){
+    strcpy(aux1,".");
+    comp=0;
+  }
+  else{
+    limpiarBuffer(aux3);
+    getcwd(dir,MAX);
+    comp = chdir(aux1);
+    if(comp==0)
+      if(strncmp(aux1,".\0",2)!=0)
+        if (strncmp(aux1,"..\0",3)==0) chdir(dir);
+        else chdir("..");
+  }
+  //cdir("",1);
+  if(rec==0) printf("********%s\n",aux1 );
+  if(comp==0){
+    if(rec==1) printf("********%s%s\n",actualdir,aux1 );
+    DIR * direct;
+    direct = opendir(aux1);
+      struct dirent * sig = readdir(direct);
+          while(sig!=NULL){
+            mostrar(l,v,sig);
+            sig=readdir(direct);
+            }
+            if(r==1 || rec==1 ){
+              chdir(aux1);
+              strcat(aux1,"/");
+              rewinddir(direct);
+              seekdir(direct,2);
+              sig=readdir(direct);
+              while(sig!=NULL){
+                limpiarBuffer(aux3);
+                if(v==1) strcat(aux3,"-v ");
+                if(l==1) strcat(aux3, "-l ");
+                listar(aux1,strcat(aux3,sig->d_name),(2+l+v),1);
+                sig=readdir(direct);
+              }
+              closedir(direct);
+              chdir(dir);
+            }
+            closedir(direct);
+        }
+    else if(rec==0) perror("Error");
+}
+/*
+--------------------------------------------------------------------------------
+*/
+
 void borrar (char arg[], int palabras){
   if (numPalabras==1){
     char dir[MAX];
     limpiarBuffer(dir);
     getcwd(dir,MAX);
-    listar(dir,2);
+    listar("",dir,2,0);
   }
 
   if (palabras==2){
@@ -363,8 +414,8 @@ void borrar (char arg[], int palabras){
       f=remove(aux2);
       if(f!=0){
         int comp = chdir(aux2);
-        chdir("..");
         if(comp==0){
+          chdir("..");
           DIR * direct;
           direct = opendir(aux2);
           seekdir(direct,i);
@@ -436,7 +487,7 @@ void escollerFuncion(char com[],char arg[],int palabras,int * acabado,tList * h)
                       }
                       else{
                         if(strncmp(com,"listar\0",7)==0){
-                            listar(arg,palabras);
+                            listar("",arg,palabras,0);
                           }
                           else{
                             printf("%s no encontrado\n",com );
