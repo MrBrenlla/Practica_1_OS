@@ -419,8 +419,9 @@ void auxInfo(char dir[], char arg[]){
     time=localtime(&datos.st_mtime);
     strftime(output,128,"%a %b %d %Y",time);
     printf("%s ",output);
-    if (strncmp(arg,".\0",2)!=0){ printf("%s/%s\n",dir, arg );}
-    else printf("%s\n",dir );
+    if (strncmp(arg,"./",2)!=0 && strncmp(arg,".\0",2)!=0){ printf("%s/%s\n",dir, arg );}
+    else printf("%s\n",arg );
+    free(time);
   }
   else perror("Error");
 
@@ -526,11 +527,24 @@ void listar(char arg[]){
   }
   while(palabras>0){
     auxListar(aux1, aux1,0, l, r, v);
+    if(strncmp(aux1,"..",2)!=0) auxListar(aux1,aux1, 0, l, r, v);
+      else{
+        getcwd(aux3,MAX);
+        chdir("..");
+        auxListar(aux1,&aux1[1], 0, l, r, v);
+        chdir(aux3);
+      }
     palabras=TrocearCadena(aux2,aux1,aux3);
     limpiarBuffer(aux2);
     strcpy(aux2,aux3);
   }
-  auxListar(aux1, aux1,0, l, r, v);
+  if(strncmp(aux1,"..",2)!=0) auxListar(aux1,aux1, 0, l, r, v);
+    else{
+      getcwd(aux3,MAX);
+      chdir("..");
+      auxListar(aux1,&aux1[1], 0, l, r, v);
+      chdir(aux3);
+    }
 }
 /*
 --------------------------------------------------------------------------------
