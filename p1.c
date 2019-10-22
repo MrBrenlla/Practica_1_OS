@@ -20,6 +20,8 @@
 #include <string.h>
 #include <time.h>
 #include <dirent.h>
+#include <pwd.h>
+#include <grp.h>
 
 //Defínese a constante MAX, que será o tamaño máximo das cadeas
 #define MAX  300
@@ -106,17 +108,36 @@ void fin(int * x ){
 --------------------------------------------------------------------------------
 */
 long tamanho(char nom[]){
-  FILE * ficheiro = fopen(nom,"r");
-  long nBytes;
-  if(ficheiro!=0){
-     fseek(ficheiro, 0, SEEK_END); // Colocar el cursor al final del fichero
-     nBytes = ftell(ficheiro); // Tamaño en bytes
-   }
-   else{
-     chdir(nom);
-     nBytes=tamanho(".");
-   }
-  return nBytes;
+  char aux[MAX];
+  struct stat datos;
+  if(stat(nom,&datos)==0){
+    return datos.st_size;
+  }
+  else perror("Error");
+}
+/*
+--------------------------------------------------------------------------------
+*/
+char * gid_to_string(gid_t id){
+  struct group *grp;
+  grp = getgrgid(id);
+  if (grp == NULL) {
+    perror("getgrgid");
+    exit(EXIT_FAILURE);
+  }
+  return grp->gr_name;
+}
+/*
+--------------------------------------------------------------------------------
+*/
+char * uid_to_string(uid_t id){
+  struct passwd *pwd;
+  pwd = getpwuid(id);
+  if(pwd == NULL) {
+      perror("getpwuid");
+  } else {
+      return pwd->pw_name;
+  }
 }
 /*
 --------------------------------------------------------------------------------
@@ -326,39 +347,106 @@ void crear(char arg[], int palabras){
 /*
 --------------------------------------------------------------------------------
 */
+char TipoFichero (mode_t m){
+switch (m&S_IFMT) { /*and bit a bit con los bits de formato,0170000 */
+case S_IFSOCK: return 's'; /*socket */
+case S_IFLNK: return 'l'; /*symbolic link*/
+case S_IFREG: return '-'; /* fichero normal*/
+case S_IFBLK: return 'b'; /*block device*/
+case S_IFDIR: return 'd'; /*directorio */
+case S_IFCHR: return 'c'; /*char device*/
+case S_IFIFO: return 'p'; /*pipe*/
+default: return '?'; /*desconocido, no deberia aparecer*/
+}
+}
+/*
+--------------------------------------------------------------------------------
+*/
+char * ConvierteModo (mode_t m)
+{
+char * permisos;
+permisos=(char *) malloc (12);
+strcpy (permisos,"---------- ");
+permisos[0]=TipoFichero(m);
+if (m&S_IRUSR) permisos[1]='r'; /*propietario*/
+if (m&S_IWUSR) permisos[2]='w';
+if (m&S_IXUSR) permisos[3]='x';
+if (m&S_IRGRP) permisos[4]='r'; /*grupo*/
+if (m&S_IWGRP) permisos[5]='w';
+if (m&S_IXGRP) permisos[6]='x';
+if (m&S_IROTH) permisos[7]='r'; /*resto*/
+if (m&S_IWOTH) permisos[8]='w';
+if (m&S_IXOTH) permisos[9]='x';
+if (m&S_ISUID) permisos[3]='s'; /*setuid, setgid y stickybit*/
+if (m&S_ISGID) permisos[6]='s';
+if (m&S_ISVTX) permisos[9]='t';
+return (permisos);
+}
+
+/*
+--------------------------------------------------------------------------------
+*/
+void auxInfo(char arg[]){
+  char aux[MAX];
+  struct tm * time ;
+  char output[128];
+  limpiarBuffer(aux);
+  if(strncmp("\0",arg,1)==0) strcpy(arg,".");
+  struct stat datos;
+  if(strncmp("/",arg,1)==0) strcpy(aux,arg);
+  else strcat(strcat(getcwd(aux,MAX),"/"),arg);
+  if(stat(arg,&datos)==0){
+    printf("%s %2ld ",ConvierteModo(datos.st_mode),datos.st_nlink );
+    printf("%7s %7s %7ld ",uid_to_string(datos.st_uid),gid_to_string(datos.st_gid),datos.st_size);
+    time=localtime(&datos.st_mtime);
+    strftime(output,128,"%c",time);
+    printf("%s %s \n",output, arg );
+  }
+  else perror("Error");
+
+
+}
+/*
+--------------------------------------------------------------------------------
+*/
+void info(char arg[],int palabras){
+  char aux1[MAX], aux2[MAX], aux3[MAX];
+  strcpy(aux2,arg);
+    limpiarBuffer(aux1);
+    palabras=TrocearCadena(aux2,aux1,aux3);
+    limpiarBuffer(aux2);
+    strcpy(aux2,aux3);
+  while(palabras>0){
+    auxInfo(aux1);
+    palabras=TrocearCadena(aux2,aux1,aux3);
+    limpiarBuffer(aux2);
+    strcpy(aux2,aux3);
+  }
+  auxInfo(aux1);
+}
+/*
+--------------------------------------------------------------------------------
+*/
 void mostrar(int l,int v,struct dirent * sig){
-  char nom[MAX];
+  char nom[MAX], aux[MAX];
   strcpy(nom,sig->d_name);
   if (v==0 || strncmp(nom,".",1)!=0){
-    if (l==0) printf("%s %d\n",nom, tamanho(nom));
+    if (l==0) printf("%s %ld\n",nom, tamanho(nom));
+    else info(strcat(strcat(getcwd(aux,MAX),"/"),nom),2);
   }
 }
 /*
 --------------------------------------------------------------------------------
 */
-void listar(char actualdir[], char arg[], int palabras, int rec){
-  int l =0;
-  int v =0;
-  int r =0;
-  int comp =0;
-  char aux1[MAX], aux2 [MAX], aux3[MAX] , dir[MAX];
-  strcpy(aux2,arg);
-  while (comp==0){
-    limpiarBuffer(aux1);
-    palabras=TrocearCadena(aux2,aux1,aux3);
-    if (strncmp(aux1,"-l\0",3)==0) l=1;
-    else if (strncmp(aux1,"-v\0",3)==0) v=1;
-          else if (strncmp(aux1,"-r\0",3)==0) r=1;
-            else comp=1;
-    limpiarBuffer(aux2);
-    strcpy(aux2,aux3);
-  }
+void auxListar(char actualdir[], char aux1[], int rec, int l, int r, int v){
+ char aux2 [MAX], dir[MAX];
+ int comp;
   if (strncmp(aux1,"\0\0",2)==0){
     strcpy(aux1,".");
     comp=0;
   }
   else{
-    limpiarBuffer(aux3);
+    limpiarBuffer(dir);
     getcwd(dir,MAX);
     comp = chdir(aux1);
     if(comp==0)
@@ -372,29 +460,53 @@ void listar(char actualdir[], char arg[], int palabras, int rec){
     DIR * direct;
     direct = opendir(aux1);
       struct dirent * sig = readdir(direct);
+        chdir(aux1);
           while(sig!=NULL){
             mostrar(l,v,sig);
             sig=readdir(direct);
             }
-            if(r==1 || rec==1 ){
-              chdir(aux1);
+            if(r==1 || rec==1){
               strcat(aux1,"/");
               rewinddir(direct);
-              seekdir(direct,2);
               sig=readdir(direct);
               while(sig!=NULL){
-                limpiarBuffer(aux3);
-                if(v==1) strcat(aux3,"-v ");
-                if(l==1) strcat(aux3, "-l ");
-                listar(aux1,strcat(aux3,sig->d_name),(2+l+v),1);
+                if(strncmp(sig->d_name,".\0",2)!=0 && strncmp(sig->d_name,"..\0",3)!=0)auxListar(aux1,sig->d_name,1,l,r,v);
                 sig=readdir(direct);
               }
-              closedir(direct);
-              chdir(dir);
             }
             closedir(direct);
+            chdir(dir);
         }
     else if(rec==0) perror("Error");
+}
+/*
+--------------------------------------------------------------------------------
+*/
+void listar(char arg[]){
+  int palabras;
+  int l =0;
+  int v =0;
+  int r =0;
+  int comp =0;
+  char aux1[MAX], aux2[MAX], aux3[MAX];
+  strcpy(aux2,arg);
+  while (comp==0){
+    limpiarBuffer(aux1);
+    palabras=TrocearCadena(aux2,aux1,aux3);
+    if (strncmp(aux1,"-l\0",3)==0) l=1;
+    else if (strncmp(aux1,"-v\0",3)==0) v=1;
+          else if (strncmp(aux1,"-r\0",3)==0) r=1;
+            else comp=1;
+    limpiarBuffer(aux2);
+    strcpy(aux2,aux3);
+  }
+  while(palabras>0){
+    auxListar("", aux1,0, l, r, v);
+    palabras=TrocearCadena(aux2,aux1,aux3);
+    limpiarBuffer(aux2);
+    strcpy(aux2,aux3);
+  }
+  auxListar("", aux1,0, l, r, v);
 }
 /*
 --------------------------------------------------------------------------------
@@ -404,15 +516,18 @@ void borrar (char arg[], int palabras){
   if (numPalabras==1){
     char dir[MAX];
     limpiarBuffer(dir);
-    getcwd(dir,MAX);
-    listar("",dir,2,0);
+    listar(".");
   }
 
   if (palabras==2){
     if (strncmp(arg,"-r\0 ",3)!=0){
         if (remove(arg) != 0) perror("Borrar no ha sido posible");
     }
-    else{borrar("",1);}
+    else{
+      char dir[MAX];
+    limpiarBuffer(dir);
+    listar(".");
+    }
   }
 
   if (palabras == 3){
@@ -424,7 +539,6 @@ void borrar (char arg[], int palabras){
     getcwd(d,MAX);
     if (strncmp(aux1,"-r\0",3)==0){
       int f;
-      int i=2;
       f=remove(aux2);
       if(f!=0){
         int comp = chdir(aux2);
@@ -432,10 +546,10 @@ void borrar (char arg[], int palabras){
           chdir("..");
           DIR * direct;
           direct = opendir(aux2);
-          seekdir(direct,i);
+          seekdir(direct,2);
             struct dirent * sig = readdir(direct);
             if (sig!=NULL){
-              chdir(aux2);
+                chdir(aux2);
                 while(sig!=NULL){
                   limpiarBuffer(aux1);
                   borrar(strcat(strcat(aux1,"-r "),sig->d_name),3);
@@ -501,11 +615,16 @@ void escollerFuncion(char com[],char arg[],int palabras,int * acabado,tList * h)
                       }
                       else{
                         if(strncmp(com,"listar\0",7)==0){
-                            listar("",arg,palabras,0);
+                            listar(arg);
                           }
                           else{
-                            printf("%s no encontrado\n",com );
-                          }
+                            if(strncmp(com,"info\0",5)==0){
+                                info(arg,palabras);
+                              }
+                              else{
+                                printf("%s no encontrado\n",com );
+                              }
+                        }
                     }
                   }
 								}
