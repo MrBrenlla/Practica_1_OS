@@ -123,23 +123,29 @@ return (permisos);
 --------------------------------------------------------------------------------
 */
 void auxInfo(char dir[], char arg[]){
-  struct tm * time ;
-  char output[128];
+  struct tm time ;
+  char aux1[128], nom[MAX];
+  char * aux2 ;
   if(strncmp("\0",arg,1)==0) strcpy(arg,".");
   struct stat datos;
-  if(stat(arg,&datos)==0){
-    printf("%7ld %s %2ld ",datos.st_ino,ConvierteModo(datos.st_mode),datos.st_nlink );
+  if(lstat(arg,&datos)==0){
+    aux2 = ConvierteModo(datos.st_mode);
+    printf("%7ld %s %2ld ",datos.st_ino,aux2,datos.st_nlink );
     printf("%7s %7s %7ld ",uid_to_string(datos.st_uid),gid_to_string(datos.st_gid),datos.st_size);
-    time=localtime(&datos.st_mtime);
-    strftime(output,128,"%a %b %d %Y",time);
-    printf("%s ",output);
-    if (strncmp(arg,"./",2)!=0 && strncmp(arg,".\0",2)!=0){ printf("%s/%s\n",dir, arg );}
-    else printf("%s\n",arg );
-    free(time);
+    time=*(localtime(&datos.st_mtime));
+    strftime(aux1,128,"%d %b %H:%M",&time);
+    printf("%s ",aux1);
+    limpiarBuffer(nom);
+    limpiarBuffer(aux1);
+    if(*aux2=='l'){
+      readlink(arg,aux1,MAX);
+      strcat(strcat(nom," -> "),aux1);
+    }
+    if (strncmp(arg,"./",2)!=0 && strncmp(arg,".\0",2)!=0 && strncmp(arg,"../",3)!=0){ printf("%s/%s%s\n",dir,arg, nom );}
+    else printf("%s/%s\n",dir,nom );
+    free(aux2);
   }
   else perror("Error");
-
-
 }
 /*
 --------------------------------------------------------------------------------
@@ -168,11 +174,10 @@ void auxListar(char actualdir[], char aux1[], int rec, int l, int r, int v){
     comp = chdir(aux1);
     if(comp==0)
       if(strncmp(aux1,".\0",2)!=0){
-        if (strncmp(aux1,"..\0",3)==0) chdir(dir);
-        else chdir("..");
+         chdir(dir);
         }
   }
-  if(rec==0) printf("********%s\n",aux1 );
+  if(rec==0) printf("********%s\n",actualdir );
   if(comp==0){
     if (rec==1) printf("********%s\n",actualdir );
     DIR * direct;
