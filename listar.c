@@ -123,19 +123,6 @@ return (permisos);
 /*
 --------------------------------------------------------------------------------
 */
-void mostrar(int l,int v,struct dirent * sig , char dir[]){
-  //Elixese si se debe mostrar o ficheiro que recive e en caso afirmativo
-  //cal é o formato adecuado
-  char nom[MAX];
-  strcpy(nom,sig->d_name);
-  if (v==0 || strncmp(nom,".",1)!=0){
-    if (l==0) printf("%s %ld\n",nom, tamanho(nom));
-    else auxInfo(dir,nom);
-  }
-}
-/*
---------------------------------------------------------------------------------
-*/
 void auxInfo(char dir[], char arg[]){
   //Recívese un nome e a ruta que fixo falta para chegar ata el para mostrar a
   //sua información ao igual que o comando "ls -li"  de linux
