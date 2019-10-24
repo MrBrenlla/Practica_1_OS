@@ -1,13 +1,10 @@
-
-// Practica 0 se SO
-// Data: 4 de Outubro do 2019
+// Practica 1 se SO
+//Parte 2, listar.c
+// Data: 23 de Outubro do 2019
 
 // Grupo 1.3
 // Brais García Brenlla ; b.brenlla
 // Ángel Álvarez Rey ; angel.alvarez.rey
-
-
-
 
 
 
@@ -51,8 +48,10 @@ void limpiarBuffer(char buf[]){
 --------------------------------------------------------------------------------
 */
 long tamanho(char nom[]){
+	//Dado o nome de un archivo do directrio actual devolve o tamaño, ou no seu defecto
+	// 0 se houbo un erro
   struct stat datos;
-  if(stat(nom,&datos)==0){
+  if(lstat(nom,&datos)==0){
     return datos.st_size;
   }
   else perror("Error");
@@ -62,10 +61,12 @@ long tamanho(char nom[]){
 --------------------------------------------------------------------------------
 */
 char * gid_to_string(gid_t id){
+	//Dado o id dun grupo devolvese o nome deste ou no seu defecto "" se houbo un erro
   struct group *grp;
   grp = getgrgid(id);
   if (grp == NULL) {
     perror("getgrgid");
+    return "";
   }
   return grp->gr_name;
 }
@@ -73,10 +74,12 @@ char * gid_to_string(gid_t id){
 --------------------------------------------------------------------------------
 */
 char * uid_to_string(uid_t id){
+	//Dado o id dun usuario devolvese o nome deste ou no seu defecto "" se houbo un erro
   struct passwd *pwd;
   pwd = getpwuid(id);
   if(pwd == NULL) {
       perror("getpwuid");
+      return "";
   }
   return pwd->pw_name;
 }
@@ -98,8 +101,7 @@ default: return '?'; /*desconocido, no deberia aparecer*/
 /*
 --------------------------------------------------------------------------------
 */
-char * ConvierteModo (mode_t m)
-{
+char * ConvierteModo (mode_t m){
 char * permisos;
 permisos=(char *) malloc (12);
 strcpy (permisos,"---------- ");
@@ -118,11 +120,25 @@ if (m&S_ISGID) permisos[6]='s';
 if (m&S_ISVTX) permisos[9]='t';
 return (permisos);
 }
-
+/*
+--------------------------------------------------------------------------------
+*/
+void mostrar(int l,int v,struct dirent * sig , char dir[]){
+  //Elixese si se debe mostrar o ficheiro que recive e en caso afirmativo
+  //cal é o formato adecuado
+  char nom[MAX];
+  strcpy(nom,sig->d_name);
+  if (v==0 || strncmp(nom,".",1)!=0){
+    if (l==0) printf("%s %ld\n",nom, tamanho(nom));
+    else auxInfo(dir,nom);
+  }
+}
 /*
 --------------------------------------------------------------------------------
 */
 void auxInfo(char dir[], char arg[]){
+  //Recívese un nome e a ruta que fixo falta para chegar ata el para mostrar a
+  //sua información ao igual que o comando "ls -li"  de linux
   struct tm time ;
   char aux1[128], nom[MAX];
   char * aux2 ;
@@ -137,15 +153,18 @@ void auxInfo(char dir[], char arg[]){
     printf("%s ",aux1);
     limpiarBuffer(nom);
     limpiarBuffer(aux1);
+    //Mirase se é un link para así poder indicar a que dirixe en caso de selo
     if(*aux2=='l'){
       readlink(arg,aux1,MAX);
       strcat(strcat(nom," -> "),aux1);
     }
-    if (strncmp(arg,"./",2)!=0 && strncmp(arg,".\0",2)!=0 && strncmp(arg,"../",3)!=0){ printf("%s/%s%s\n",dir,arg, nom );}
+    if (strncmp(arg,"./",2)!=0 && strncmp(arg,".\0",2)!=0 && strncmp(arg,"../",3)!=0){
+      printf("%s/%s%s\n",dir,arg, nom );
+    }
     else printf("%s/%s\n",dir,nom );
     free(aux2);
   }
-  else perror("Error");
+  else perror(" Error");//Se o nome non existe salta un erro
 }
 /*
 --------------------------------------------------------------------------------
